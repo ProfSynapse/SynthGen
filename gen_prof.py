@@ -46,7 +46,7 @@ def generate_conversation(note, url="http://localhost:1234/v1/chat/completions",
         "👍🏼": null,  # List the user's inferred preferences, including their likes, dislikes, communication style, expertise level, and any other relevant characteristics.
         "🚧": null,  # Identify any constraints, limitations, or restrictions that might affect progress towards the current subgoal or global goal. This could include technical limitations, time constraints, or resource availability.
         "🔧": null,  # Propose adjustments or refinements to the LLM's response based on the progress indicator (🚦), user sentiment (💗), and conversation context (📥). Suggest improvements to better align with the user's needs and preferences.
-        "🧰": null,  # List any tools, resources, or dependencies required to complete the current subgoal or make progress towards the global goal. This could be a list of specific items or "null" if no tools are needed.
+        "🧰": null,  # Tool are the same as function calls, and only include the specific tools you have access to. This could be a list of specific tools or "null" if no tools are needed.
         "🧭": null,  # Provide a comprehensive, step-by-step strategy for achieving the current subgoal, taking into account the progress (🚦), user sentiment (💗), context (📥), preferences (👍🏼), constraints (🚧), adjustments (🔧), and tools (🧰). Break down complex strategies into phases or milestones.
         "🧠": "Expertise in [domain], specializing in [subdomain]",  # Specify the LLM's expertise context, filling in the relevant domain and subdomain. If needed, include a more extensive knowledge base or ontology.
         "🗣": "low"  # Set the verbosity level for the LLM's response, choosing from "low" (concise), "medium" (balanced), or "high" (detailed). Optionally, specify the output format (e.g., paragraph, bullets, numbering).
@@ -85,7 +85,9 @@ def generate_conversation(note, url="http://localhost:1234/v1/chat/completions",
 
     # System prompt for the user
     user_system_prompt = """
+    # MISSION
     You are a curious user seeking assistance from Professor Synapse (🧙🏿‍♂️) to solve a problem related to the given document.
+    Your goal is to have a productive conversation with 🧙🏿‍♂️ and successfully solve your problem.
 
     Your task:
     1. Based on the provided document, come up with a problem you want to solve.
@@ -94,16 +96,21 @@ def generate_conversation(note, url="http://localhost:1234/v1/chat/completions",
     4. Encounter issues during the conversation, and raise them to Professor Synapse, wait for his response.
     5. The conversation will follow a natural flow, with you seeking clarification, providing more details, or asking follow-up questions based on Professor Synapse's responses.
 
-    Your goal is to have a productive conversation with Professor Synapse and successfully solve your problem.
-    
-    🧙🏿‍♂️ is a trained chatbot, so you are to only answer as yourself, not Professor Synapse.
 
+    # RULES 
+    - 🧙🏿‍♂️ is a trained chatbot, so you are to only answer as yourself, not Professor Synapse.
+    - End every output with the next problem your facing and an open ended question for 🧙🏿‍♂️.
+    
     User: <problem statment and question>
     Wait for 🧙🏿‍♂️ to respond.
+    User: <next problem and question>
     """
 
     # User comes up with a problem based on the document
-    user_problem = generate_response("user", f"{user_system_prompt}\n\nDocument:\n{note['content']}\n\nProblem: <generate_problem>", max_tokens=100)
+    user_problem = generate_response("user", f"{user_system_prompt}\n\nDocument:\n{note['content']}\n\n <generate problem>", max_tokens=100)
+    if user_problem is None:
+        print("Failed to generate user problem.")
+        return None
     conversation_history.append({"role": "user", "content": user_problem})
 
     # Determine the number of turns for the conversation
@@ -114,18 +121,27 @@ def generate_conversation(note, url="http://localhost:1234/v1/chat/completions",
     for turn in range(num_turns):
         cor_prompt = f"{cor_system_prompt}\n\nDocument:\n{note['content']}\n\nConversation History:\n{conversation_history}\n\nFilled-in CoR:"
         cor_response = generate_response("assistant", cor_prompt, max_tokens=1000)
+        if cor_response is None:
+            print("Failed to generate CoR response.")
+            return conversation_history
         conversation_history.append({"role": "assistant", "content": cor_response})
 
         synapse_prompt = f"{synapse_system_prompt}\n\nDocument:\n{note['content']}\n\nConversation History:\n{conversation_history}\n\nCoR:\n{cor_response}\n\n🧙🏿‍♂️'s response:"
-        synapse_response = generate_response("🧙🏿‍♂️:", synapse_prompt, max_tokens=1000)
-        conversation_history.append({"role": "🧙🏿‍♂️:", "content": synapse_response})
+        synapse_response = generate_response("assistant", synapse_prompt, max_tokens=1000)
+        if synapse_response is None:
+            print("Failed to generate Synapse response.")
+            return conversation_history
+        conversation_history.append({"role": "assistant", "content": synapse_response})
 
         user_prompt = f"{user_system_prompt}\n\nConversation History:\n{conversation_history}\n\nUser's response:"
         user_response = generate_response("user", user_prompt, max_tokens=100)
+        if user_response is None:
+            print("Failed to generate user response.")
+            return conversation_history
         conversation_history.append({"role": "user", "content": user_response})
 
         if "<requires_tool>" in user_response:
-            tool_call = generate_response("🧙🏿‍♂️:", f"To address the user's request, we need to make a tool call:\n\n<generate_tool_call>", max_tokens=1000, functions=[
+            tool_call = generate_response("assistant", f"To address the user's request, we need to make a tool call:\n\n<generate_tool_call>", max_tokens=1000, functions=[
                 {
                     "name": "get_weather",
                     "description": "Get the current weather for a given location.",
@@ -145,9 +161,12 @@ def generate_conversation(note, url="http://localhost:1234/v1/chat/completions",
                     }
                 }
             ])
+            if tool_call is None:
+                print("Failed to generate tool call.")
+                return conversation_history
             conversation_history.append({"role": "assistant", "content": tool_call})
 
-        return conversation_history
+    return conversation_history
 
 def format_output(note, conversation):
     return {
@@ -163,7 +182,6 @@ def format_output(note, conversation):
         "🧭": None,  # Provide a comprehensive, step-by-step strategy
         "🧠": "Expertise in [domain], specializing in [subdomain]",  # Specify the LLM's expertise context
         "🗣": "low",  # Set the verbosity level for the LLM's response
-        "conversation": conversation  # Store the conversation history
     }
 
 # Function to save the generated conversations to a JSON file
@@ -173,7 +191,7 @@ def save_conversations_to_json(conversations, output_file):
 
 # Main script
 def main():
-    obsidian_note_path = "G:/My Drive/Professor Synapse/_📭 Inbox/Techno-Burnout.md"  # Change this to your actual note path
+    obsidian_note_path = "G:/My Drive/Professor Synapse/Mourning Dove.md"  # Change this to your actual note path
     output_file = "synthetic_conversations.json"
     num_conversations = 1  # Change this to the desired number of conversations for the single note
     
@@ -195,5 +213,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
