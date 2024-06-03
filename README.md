@@ -19,7 +19,7 @@ https://github.com/ProfSynapse/Synth_Prof.git
 
 OR
 
-2. Download the zip version by clicking `<> Code` in the top right, and clicking the **Download .zip**. Uncompress and save to a folder you have easy access to, or one to keep your code in.
+2. Download the zip version by clicking `<> Code` in the top right, and clicking the **Download .zip**. Uncompress and save to a folder you have easy access to, or one to keep your code in. Go into VS code and open a new folder (File>New Folder) and open the actual folder into the environment.
 
 *Note: Make sure the folder isn't doubled up (e.g. Synth_Prof folder is inside another Synth_Prof Folder)*
 
