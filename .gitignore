@@ -1,6 +1,5 @@
 .env
-synthetic_conversations.json
 processed_notes.txt
 synthgen v1.json
 myenv
-_pycache_
+synth_conversations
