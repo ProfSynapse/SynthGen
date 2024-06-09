@@ -35,17 +35,32 @@ OR
 If you plan to use OpenAI for the generations:
 1. Create an API key from your [OpenAI account](https://platform.openai.com/api-keys) (note you will need to set up billing as this will cost money).
 2. Create `.env` file and type in OPENAI_API_KEY=insert_your_API_Key_here
-3. Optionally open the config.yaml file and where it says `model_id:` replace whatever is in the "" with your [model of choice](https://platform.openai.com/docs/models)
 
-### Step 3: Find the path to your note
-Ensure you have an Obsidian note (.md file) you want to read and generate conversations from in the config.yaml file. Update the path in the script accordingly where it says:
+### Step 3: Find the path to your note folder
+Ensure you have an Obsidian note folder filled with .md file you want to read and generate conversations from in the `config.yaml` file. Update the path in the script accordingly where it says:
 `obsidian_vault_path:`
 
-An example path my looks like **C:/Users/Name/Documents/My Vault/Note1.md**
+An example path my looks like **C:/Users/Name/Documents/My Vault/My Folder**
 
 Optionally you can also change the `num_conversations:`, which will run a conversation on each note that number of times. It is set to 1 by default.
 
-### Step 4: Set Up a Virtual Environment in VS Code
+### Step 4 (optional):
+1. Update the `generation_parameters`, which include the max tokens depending on who's generating (user, chain of reason, or the professor)
+2. Update the `conversation_generation` `num_conversations` - this will define the number of conversations you want to generate about each note.
+3. Update the `[model]_details` by changing the model name in "" to the model you want from that provider. You can find the proper names of models by googling them.
+
+### Step 5: Update your prompts
+In the `config.yaml` file you will see 3 different system prompts:
+1. **cor_system_prompt**: I would not recommend changing this, as I would like to keep it standardized, but this is the chain of reason module, that will generate prior to the assistant output (in this case the Professor). That being said, feel free to experiment to see if there is a way you prefer the chain of reason to generate.
+2. **synapse_system_prompt**: Right now this is set to the Professor and my preferences, but think of this as a fill in the blank worksheet. Under each "# HEADING" you can change things to your liking. Something things to consider:
+   - Replace the Professor and his emoji's with your own name for an assistant throughout the prompt
+   - Replace my name with your name
+   - Update the context to include things about yourself
+   - Update all of the traits like personality, philosophy, and values
+   - Change the output samples to align more with how you want your assistant to talk
+3. **user_system_prompt**: Similar to the Synapse prompt, update this one to make it all about you! In particular update the "# CHARACTER" section, and replace my name and the Professors with yours and your assistant.
+
+### Step 6: Set Up a Virtual Environment in VS Code
 1. Open a new terminal (terminal>new), and type:
 `python -m venv venv`
 2. Click Enter/Return
@@ -59,11 +74,13 @@ On Windows
 Type
 `pip install -r requirements.txt`
 
-### Step 6: Run the Main Script:
-Execute the main script to generate synthetic conversations.
+### Step 7: Run the Main Script:
+In your terminal, execute the main script to generate synthetic conversations.
 
 In your terminal type:
-`python gen_prof.py`
+`python main.py`
+
+Choose the model you want to use.
 
 You can watch it generate the conversations in LM Studio, or it will output directly into the terminal for openai.
 
