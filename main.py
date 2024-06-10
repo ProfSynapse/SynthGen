@@ -31,12 +31,8 @@ def main():
     use_openrouter = model_choice == "5"
     use_local = model_choice == "6"
 
-    gemini_api_key_index = 0
-
     conversations = []
     print("Starting to process notes...")
-    gemini_api_key_index = 0
-    max_api_key_cycles = len(gemini_api_keys)
 
     try:
         for root, dirs, files in os.walk(config['file_paths']['obsidian_vault_path']):
@@ -61,8 +57,7 @@ def main():
                             use_claude,
                             use_groq,
                             use_gemini,
-                            use_openrouter,
-                            gemini_api_key_index,
+                            use_openrouter
                         )
                         if conversation:
                             formatted_output = format_output(conversation)

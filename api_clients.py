@@ -4,12 +4,12 @@ from dotenv import load_dotenv
 import anthropic
 from groq import Groq
 import google.generativeai as genai
-from google.api_core import retry
 from google.api_core import exceptions
 import requests
-import json
 import time
 from datetime import datetime, timedelta
+from tenacity import retry as tenacity_retry, stop_after_attempt, wait_exponential
+import logging
 
 load_dotenv()
 
@@ -70,63 +70,29 @@ def generate_response_groq(conversation_history, role, message, model_id, temper
         return None
 
 def generate_response_gemini(message, model, gemini_api_key_index, max_retries=3, initial_delay=1):
-    current_api_key = gemini_api_keys[gemini_api_key_index]
-    genai.configure(api_key=current_api_key)
-
-    def is_500_error(exception):
-        return isinstance(exception, exceptions.InternalServerError) and exception.code == 500
-
-    @retry.Retry(predicate=is_500_error)
-    def request_gemini_content():
-        return model.generate_content(message).text
-
     retries = 0
     delay = initial_delay
 
-    requests_per_minute = 2
-    tokens_per_minute = 32000
-    requests_per_day = 50
-
-    api_key_counters = {
-        "requests_this_minute": 0,
-        "tokens_this_minute": 0,
-        "requests_today": 0,
-        "minute_start_time": datetime.now(),
-        "day_start_time": datetime.now().date()
-    }
-
     while retries < max_retries:
-        if api_key_counters["requests_this_minute"] >= requests_per_minute:
-            seconds_to_wait = 60 - (datetime.now() - api_key_counters["minute_start_time"]).seconds
-            time.sleep(seconds_to_wait)
-            api_key_counters["requests_this_minute"] = 0
-            api_key_counters["tokens_this_minute"] = 0
-            api_key_counters["minute_start_time"] = datetime.now()
-
-        if api_key_counters["tokens_this_minute"] >= tokens_per_minute:
-            seconds_to_wait = 60 - (datetime.now() - api_key_counters["minute_start_time"]).seconds
-            time.sleep(seconds_to_wait)
-            api_key_counters["requests_this_minute"] = 0
-            api_key_counters["tokens_this_minute"] = 0
-            api_key_counters["minute_start_time"] = datetime.now()
-
-        if api_key_counters["requests_today"] >= requests_per_day:
-            seconds_to_wait = (datetime.combine(datetime.now().date() + timedelta(days=1), datetime.min.time()) - datetime.now()).seconds
-            time.sleep(seconds_to_wait)
-            api_key_counters["requests_today"] = 0
-            api_key_counters["day_start_time"] = datetime.now().date()
+        current_api_key = gemini_api_keys[gemini_api_key_index]
+        logging.info(f"Trying Gemini API key index: {gemini_api_key_index}")
+        genai.configure(api_key=current_api_key)
 
         try:
-            response_text = request_gemini_content()
-            api_key_counters["requests_this_minute"] += 1
-            api_key_counters["tokens_this_minute"] += len(response_text)
-            api_key_counters["requests_today"] += 1
+            response_text = model.generate_content(message).text
+            logging.info(f"Successfully generated response with Gemini API key index: {gemini_api_key_index}")
             return response_text
         except exceptions.ResourceExhausted:
+            logging.warning(f"Rate limit exceeded for Gemini API key index: {gemini_api_key_index}. Retrying with the next API key...")
+            gemini_api_key_index = (gemini_api_key_index + 1) % len(gemini_api_keys)
             retries += 1
             time.sleep(delay)
             delay *= 2
+        except Exception as e:
+            logging.error(f"Error generating response from Gemini API: {str(e)}")
+            return None
 
+    logging.error("Reached maximum API key cycles. Please try again later.")
     return None
 
 def generate_response_local(conversation_history, role, message, config, max_tokens=None, response_type=None):

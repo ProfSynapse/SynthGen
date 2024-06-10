@@ -17,11 +17,12 @@ import google.generativeai as genai
 # Configure logging
 logging.basicConfig(filename='synapse_thoughts.log', level=logging.INFO, format='%(asctime)s - %(message)s')
 
-def generate_conversation(note, output_file, config, use_openai, use_claude, use_groq, use_gemini, gemini_api_key_index, max_api_key_cycles=None):
+def generate_conversation(note, output_file, config, use_openai, use_claude, use_groq, use_gemini, use_openrouter):
     model_conversation_history = []
     user_conversation_history = []
     conversation_id = str(uuid.uuid4())
     api_key_cycle_count = 0
+    max_api_key_cycles = len(gemini_api_keys)  # Add this line to calculate max_api_key_cycles
 
     if use_gemini:
         gemini_model = genai.GenerativeModel(config['gemini_details']['model_id'])
@@ -29,8 +30,15 @@ def generate_conversation(note, output_file, config, use_openai, use_claude, use
         gemini_model = None
 
     def generate_response(role, message, response_type=None):
-        nonlocal gemini_api_key_index, api_key_cycle_count
+        nonlocal api_key_cycle_count
+
+        # Debug statement to check the type and content of max_tokens configuration
+        logging.info(f"Config max_tokens: {config['generation_parameters']['max_tokens']}")
+        if not isinstance(config['generation_parameters']['max_tokens'], dict):
+            raise ValueError("config['generation_parameters']['max_tokens'] should be a dictionary")
+
         max_tokens = config['generation_parameters']['max_tokens'].get(response_type or role, config['generation_parameters']['max_tokens']['default'])
+
         if use_openai:
             return generate_response_openai(model_conversation_history, role, message, config['openai_details']['model_id'], config['openai_api_key'], config['generation_parameters']['temperature'], max_tokens)
         elif use_claude:
@@ -38,13 +46,14 @@ def generate_conversation(note, output_file, config, use_openai, use_claude, use
         elif use_groq:
             return generate_response_groq(model_conversation_history, role, message, config['groq_details']['model_id'], config['generation_parameters']['temperature'], max_tokens)
         elif use_gemini:
+            logging.info(f"Attempting to generate response with Gemini API. Max API key cycles: {max_api_key_cycles}")
+            logging.info(f"Available Gemini API keys: {gemini_api_keys}")
             while api_key_cycle_count < max_api_key_cycles:
-                response = generate_response_gemini(message, gemini_model, gemini_api_key_index)
+                response = generate_response_gemini(message, gemini_model, api_key_cycle_count)
                 if response is not None:
                     return response
-                gemini_api_key_index = (gemini_api_key_index + 1) % len(gemini_api_keys)
                 api_key_cycle_count += 1
-                genai.configure(api_key=gemini_api_keys[gemini_api_key_index])
+            logging.error("Reached maximum API key cycles. Please try again later.")
             raise exceptions.ResourceExhausted("Reached maximum API key cycles. Please try again later.")
         else:
             return generate_response_local(model_conversation_history, role, message, config, max_tokens, response_type)
