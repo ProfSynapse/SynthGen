@@ -32,26 +32,28 @@ def load_processed_notes(file_path):
     Returns:
         set: A set containing the processed note paths.
     """
+    processed_notes = set()
     if os.path.exists(file_path):
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
-                return set(file.read().splitlines())
+                for line in file:
+                    processed_notes.add(line.strip())
         except IOError as e:
             print(f"Error loading processed notes from {file_path}")
             print(f"Error details: {str(e)}")
-    return set()
+    return processed_notes
 
-def save_processed_notes(file_path, processed_notes):
+def save_processed_note(file_path, note_path):
     """
-    Save the processed notes to a file.
+    Append a processed note path to the processed notes file.
 
     Args:
         file_path (str): The path to the processed notes file.
-        processed_notes (set): A set containing the processed note paths.
+        note_path (str): The path of the processed note to be appended.
     """
     try:
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write('\n'.join(processed_notes))
+        with open(file_path, 'a', encoding='utf-8') as file:
+            file.write(f"{note_path}\n")
     except IOError as e:
-        print(f"Error saving processed notes to {file_path}")
+        print(f"Error appending processed note to {file_path}")
         print(f"Error details: {str(e)}")

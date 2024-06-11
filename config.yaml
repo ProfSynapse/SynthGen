@@ -29,6 +29,7 @@ groq_details:
 
 gemini_details:
   model_id: "gemini-1.5-flash"
+  max_usage_per_key: 100
 
 system_prompts:
   cor_system_prompt: |
