@@ -7,9 +7,6 @@ import google.generativeai as genai
 from google.api_core import exceptions
 import requests
 import time
-from datetime import datetime, timedelta
-from tenacity import retry as tenacity_retry, stop_after_attempt, wait_exponential
-import logging
 
 load_dotenv()
 
@@ -24,7 +21,14 @@ gemini_api_keys = [
     os.getenv('GEMINI_API_KEY_8'),
     os.getenv('GEMINI_API_KEY_9'),
     os.getenv('GEMINI_API_KEY_10'),
-    os.getenv('GEMINI_API_KEY_11')
+    os.getenv('GEMINI_API_KEY_11'),
+    os.getenv('GEMINI_API_KEY_12'),
+    os.getenv('GEMINI_API_KEY_13'),
+    os.getenv('GEMINI_API_KEY_14'),
+    os.getenv('GEMINI_API_KEY_15'),
+    os.getenv('GEMINI_API_KEY_16'),
+    os.getenv('GEMINI_API_KEY_17'),
+    os.getenv('GEMINI_API_KEY_18')
 ]
 
 def generate_response_openai(conversation_history, role, message, model_id, api_key, temperature, max_tokens):
@@ -72,28 +76,35 @@ def generate_response_groq(conversation_history, role, message, model_id, temper
 def generate_response_gemini(message, model, gemini_api_key_index, max_retries=3, initial_delay=1):
     retries = 0
     delay = initial_delay
+    max_api_key_cycles = len(gemini_api_keys)
 
-    while retries < max_retries:
+    while gemini_api_key_index < max_api_key_cycles:
         current_api_key = gemini_api_keys[gemini_api_key_index]
-        logging.info(f"Trying Gemini API key index: {gemini_api_key_index}")
+        print(f"Trying Gemini API key: {current_api_key}")
         genai.configure(api_key=current_api_key)
 
-        try:
-            response_text = model.generate_content(message).text
-            logging.info(f"Successfully generated response with Gemini API key index: {gemini_api_key_index}")
-            return response_text
-        except exceptions.ResourceExhausted:
-            logging.warning(f"Rate limit exceeded for Gemini API key index: {gemini_api_key_index}. Retrying with the next API key...")
-            gemini_api_key_index = (gemini_api_key_index + 1) % len(gemini_api_keys)
-            retries += 1
-            time.sleep(delay)
-            delay *= 2
-        except Exception as e:
-            logging.error(f"Error generating response from Gemini API: {str(e)}")
-            return None
+        while retries < max_retries:
+            try:
+                response_text = model.generate_content(message).text
+                print(f"Successfully generated response with Gemini API key index: {gemini_api_key_index}")
+                return response_text
+            except exceptions.ResourceExhausted:
+                print(f"Rate limit exceeded for Gemini API key index: {gemini_api_key_index}. Retrying...")
+                retries += 1
+                time.sleep(delay)
+                delay *= 2
+            except Exception as e:
+                print(f"An unexpected error occurred while generating response from Gemini API: {str(e)}")
+                return None
 
-    logging.error("Reached maximum API key cycles. Please try again later.")
+        print(f"Reached maximum retries for Gemini API key index: {gemini_api_key_index}. Moving to the next API key...")
+        gemini_api_key_index += 1
+        retries = 0
+        delay = initial_delay
+
+    print("Reached maximum API key cycles. Please try again later.")
     return None
+
 
 def generate_response_local(conversation_history, role, message, config, max_tokens=None, response_type=None):
     url = config['api_details']['url']

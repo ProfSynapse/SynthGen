@@ -6,3 +6,4 @@ Cython
 anthropic
 groq
 google-generativeai
+tenacity

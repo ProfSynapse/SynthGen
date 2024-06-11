@@ -31,8 +31,15 @@ def main():
     use_openrouter = model_choice == "5"
     use_local = model_choice == "6"
 
+    gemini_api_key_index = 0
+    print(f"Switching to Gemini API key index: {gemini_api_key_index}")
+    print(f"Current Gemini API key: {gemini_api_keys[gemini_api_key_index]}")
+    
+    max_api_key_cycles = len(gemini_api_keys)
+
     conversations = []
     print("Starting to process notes...")
+    print(f"Available Gemini API keys: {gemini_api_keys}")
 
     try:
         for root, dirs, files in os.walk(config['file_paths']['obsidian_vault_path']):
@@ -49,29 +56,44 @@ def main():
 
                     for i in range(config['conversation_generation']['num_conversations']):
                         print(f"\nGenerating conversation {i + 1} for note: {note['filename']}")
-                        conversation = generate_conversation(
-                            note,
-                            output_file,  # Pass the new output_file variable
-                            config,
-                            use_openai,
-                            use_claude,
-                            use_groq,
-                            use_gemini,
-                            use_openrouter
-                        )
-                        if conversation:
-                            formatted_output = format_output(conversation)
-                            conversations.append(formatted_output)
-                            processed_notes.add(note_path)
-                            save_processed_notes(processed_notes_file, processed_notes)
-    except exceptions.ResourceExhausted as e:
-        print(str(e))
-        return
+                        try:
+                            conversation = generate_conversation(
+                                note,
+                                output_file,
+                                config,
+                                use_openai,
+                                use_claude,
+                                use_groq,
+                                use_gemini,
+                                use_openrouter,
+                                gemini_api_key_index,
+                            )
+                            if conversation:
+                                formatted_output = format_output(conversation)
+                                conversations.append(formatted_output)
+                                processed_notes.add(note_path)
+                                save_processed_notes(processed_notes_file, processed_notes)
+                        except exceptions.ResourceExhausted as e:
+                            print(str(e))
+                            gemini_api_key_index += 1
+                            if gemini_api_key_index >= max_api_key_cycles:
+                                print("All Gemini API keys have been exhausted. Please try again later.")
+                                return
+                            print(f"Switching to Gemini API key index: {gemini_api_key_index}")
 
-    finalize_json_output(output_file)  # Pass the new output_file variable
-
-    print(f"\nGenerated synthetic conversations saved to {output_file}")  # Print the new output_file variable
-    print("Script finished.")
+                    print(f"Finished processing note: {note['filename']}")
+                    print(f"Switching to Gemini API key index: {gemini_api_key_index}")
+    
+    except KeyboardInterrupt:
+        print("\nScript interrupted by user.")
+        save_processed_notes(processed_notes_file, processed_notes)
+        finalize_json_output(output_file)
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+    finally:
+        finalize_json_output(output_file)
+        print(f"\nGenerated synthetic conversations saved to {output_file}")
+        print("Script finished.")
 
 if __name__ == "__main__":
     main()
