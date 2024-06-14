@@ -10,22 +10,55 @@ from api_clients import (
 )
 from google.api_core import exceptions
 import google.generativeai as genai
+from dotenv import load_dotenv
 
-def generate_conversation(note, output_file, config, use_openai, use_claude, use_groq, use_gemini, use_openrouter, gemini_api_key_index):
+# Load environment variables from a .env file
+load_dotenv()
+
+# Load API keys from environment variables
+openai_api_key = os.getenv('OPENAI_API_KEY')
+claude_api_key = os.getenv('CLAUDE_API_KEY')
+groq_api_key = os.getenv('GROQ_API_KEY')
+gemini_api_key = os.getenv('GEMINI_API_KEY')
+local_api_url = os.getenv('LOCAL_API_URL')
+local_api_model = os.getenv('LOCAL_API_MODEL')
+
+def generate_conversation(note, output_file, config, use_openai, use_claude, use_groq, use_gemini, use_openrouter):
+    """
+    Generate a synthetic conversation based on a user's note.
+
+    Args:
+        note (dict): Note content to base the conversation on.
+        output_file (str): Path to the output file for saving the conversation.
+        config (dict): Configuration settings.
+        use_openai (bool): Flag to use OpenAI.
+        use_claude (bool): Flag to use Claude.
+        use_groq (bool): Flag to use Groq.
+        use_gemini (bool): Flag to use Gemini.
+        use_openrouter (bool): Flag to use OpenRouter.
+
+    Returns:
+        list: The generated conversation history.
+    """
     model_conversation_history = []
     user_conversation_history = []
     conversation_id = str(uuid.uuid4())
-    api_key_cycle_count = 0
 
     if use_gemini:
         gemini_model = genai.GenerativeModel(config['gemini_details']['model_id'])
-    else:
-        gemini_model = None
 
     def generate_response(role, message, response_type=None):
-        nonlocal api_key_cycle_count
+        """
+        Generate a response using the selected AI model.
 
-        # Debug statement to check the type and content of max_tokens configuration
+        Args:
+            role (str): The role of the responder (e.g., user, assistant).
+            message (str): The message to generate a response for.
+            response_type (str, optional): The type of response to generate.
+
+        Returns:
+            str: The generated response.
+        """
         print(f"Config max_tokens: {config['generation_parameters']['max_tokens']}")
         if not isinstance(config['generation_parameters']['max_tokens'], dict):
             raise ValueError("config['generation_parameters']['max_tokens'] should be a dictionary")
@@ -33,19 +66,36 @@ def generate_conversation(note, output_file, config, use_openai, use_claude, use
         max_tokens = config['generation_parameters']['max_tokens'].get(response_type or role, config['generation_parameters']['max_tokens']['default'])
 
         if use_openai:
-            return generate_response_openai(model_conversation_history, role, message, config['openai_details']['model_id'], config['openai_api_key'], config['generation_parameters']['temperature'], max_tokens)
+            return generate_response_openai(model_conversation_history, role, message, config['openai_details']['model_id'], openai_api_key, config['generation_parameters']['temperature'], max_tokens)
         elif use_claude:
-            return generate_response_claude(model_conversation_history, role, message, config['claude_details']['model_id'], config['claude_api_key'], config['generation_parameters']['temperature'], max_tokens)
+            return generate_response_claude(model_conversation_history, role, message, config['claude_details']['model_id'], claude_api_key, config['generation_parameters']['temperature'], max_tokens)
         elif use_groq:
             return generate_response_groq(model_conversation_history, role, message, config['groq_details']['model_id'], config['generation_parameters']['temperature'], max_tokens)
         elif use_gemini:
-            print(f"Attempting to generate response with Gemini API. Current API key index: {gemini_api_key_index}")
-            response = generate_response_gemini(message, gemini_model, gemini_api_key_index)
+            print(f"Attempting to generate response with Gemini API.")
+            response = generate_response_gemini(message, gemini_model)
             if response is None:
                 raise exceptions.ResourceExhausted("All Gemini API keys have been exhausted. Please try again later.")
             return response
 
     def generate_and_append_response(role, prompt, model_conversation_history, user_conversation_history, output_file, conversation_id, turn, response_type, name):
+        """
+        Generate a response and append it to the conversation history.
+
+        Args:
+            role (str): The role of the responder (e.g., user, assistant).
+            prompt (str): The prompt for generating the response.
+            model_conversation_history (list): The history of the conversation for the model.
+            user_conversation_history (list): The history of the user's conversation.
+            output_file (str): The output file path.
+            conversation_id (str): The conversation ID.
+            turn (int): The turn number in the conversation.
+            response_type (str): The type of response to generate.
+            name (str): The name of the responder.
+
+        Returns:
+            str: The generated response.
+        """
         print(f"Conversation ID: {conversation_id}, Turn: {turn}, Role: {role}")
         print(random.choice(config['synapse_thoughts']))
         response = generate_response(role, prompt, response_type)
@@ -101,6 +151,14 @@ def generate_conversation(note, output_file, config, use_openai, use_claude, use
     return model_conversation_history
 
 def append_conversation_to_json(conversation, output_file, conversation_id):
+    """
+    Append a conversation entry to a JSON file.
+
+    Args:
+        conversation (dict): The conversation entry to append.
+        output_file (str): Path to the output JSON file.
+        conversation_id (str): The ID of the conversation.
+    """
     if not os.path.exists(output_file):
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump([], f)
@@ -117,7 +175,22 @@ def append_conversation_to_json(conversation, output_file, conversation_id):
         json.dump(conversations, f, indent=4)
 
 def format_output(conversation):
+    """
+    Format the output of the conversation.
+
+    Args:
+        conversation (list): The conversation history.
+
+    Returns:
+        list: The formatted conversation history.
+    """
     return conversation
 
 def finalize_json_output(output_file):
+    """
+    Finalize the JSON output file.
+
+    Args:
+        output_file (str): Path to the output JSON file.
+    """
     pass

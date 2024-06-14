@@ -8,7 +8,7 @@ def read_obsidian_note(file_path):
         file_path (str): The path to the Obsidian note file.
 
     Returns:
-        dict: A dictionary containing the filename and content of the note.
+        dict: A dictionary containing the filename and content of the note, or None if an error occurs.
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -57,3 +57,33 @@ def save_processed_note(file_path, note_path):
     except IOError as e:
         print(f"Error appending processed note to {file_path}")
         print(f"Error details: {str(e)}")
+
+def delete_processed_note(file_path, note_path):
+    """
+    Delete a processed note path from the processed notes file.
+
+    Args:
+        file_path (str): The path to the processed notes file.
+        note_path (str): The path of the processed note to be deleted.
+
+    Returns:
+        bool: True if the note was successfully deleted, False otherwise.
+    """
+    try:
+        if not os.path.exists(file_path):
+            print(f"Processed notes file not found: {file_path}")
+            return False
+        
+        with open(file_path, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+
+        with open(file_path, 'w', encoding='utf-8') as file:
+            for line in lines:
+                if line.strip() != note_path:
+                    file.write(line)
+
+        return True
+    except IOError as e:
+        print(f"Error deleting processed note from {file_path}")
+        print(f"Error details: {str(e)}")
+        return False

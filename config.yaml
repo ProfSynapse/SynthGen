@@ -1,5 +1,5 @@
 file_paths:
-  obsidian_vault_path: "G:/My Drive/Professor Synapse/🧠 SynthBrain/01 - 🎥 Commercial Hub/📸 Content Capture"
+  obsidian_vault_path: "G:/My Drive/Professor Synapse/02 - 🚀 Learning/🏺 History and Culture"
   output_file: "synthetic_conversations.json"
 
 generation_parameters:
@@ -29,7 +29,7 @@ groq_details:
 
 gemini_details:
   model_id: "gemini-1.5-flash"
-  max_usage_per_key: 100
+  max_usage_per_key: 500
 
 system_prompts:
   cor_system_prompt: |
