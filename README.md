@@ -28,16 +28,17 @@ OR
 `python -m venv venv`
 2. Click Enter/Return
 3. Then for MAC:
-`source venv/bin/activate`
+   `source venv/bin/activate`
 
-On Windows
-`venv\Scripts\activate`
+   On Windows
+   `venv\Scripts\activate`
 
 ### Step 3: Install Dependencies
 Type
 `pip install -r requirements.txt`
 
-### Step 4: Choose your Model
+### Step 4: Set up Your Local Model (optiona)
+**Only do this if you want to use a Local Model:**
 1. Download your preferred model in LM Studio, and open the local server tab (it looks kind of like ⬅️➡️).
 2. Set your context length, make sure GPU Offload is on and set it somewhere in the middle.
 3. Take note of the server port (probably 1234) and make sure that lines up in the code where it says `http://localhost:1234/v1/chat/completions`
@@ -56,7 +57,8 @@ Execute the main script to generate synthetic conversations.
 In your terminal type:
 `python gen_prof.py`
 
-You can watch it generate the conversations in LM Studio
+Then choose the model you want to use based on the number.
+Right now ONLY Local, OpenAI, and Gemini work! Working on the others.
 
 # Step 7: Check the Output
-The generated conversations will be saved to a JSON file specified in the script (synthetic_conversations.json by default) in the VS code folder.
+The generated conversations will be saved to a folder filled with JSON files (synthetic_conversations by default) in the VS code folder.
