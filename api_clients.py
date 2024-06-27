@@ -1,3 +1,5 @@
+# api_clients.py
+
 import openai
 import os
 from dotenv import load_dotenv
@@ -64,9 +66,13 @@ def generate_response_claude(conversation_history, role, message, model_id, temp
     """
     client = anthropic.Client(api_key=claude_api_key)
     try:
+        # Prepare the messages for Claude API
+        claude_messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_history]
+        claude_messages.append({"role": role, "content": message})
+
         response = client.messages.create(
             model=model_id,
-            messages=[{"role": message["role"], "content": message["content"]} for message in conversation_history] + [{"role": role, "content": message}],
+            messages=claude_messages,
             temperature=temperature,
             max_tokens=max_tokens
         )

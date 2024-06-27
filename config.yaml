@@ -1,5 +1,7 @@
+# config.yaml
+
 file_paths:
-  obsidian_vault_path: "G:/My Drive/Professor Synapse/02 - 🚀 Learning/🏺 History and Culture"
+  obsidian_vault_path: "G:/My Drive/Professor Synapse/🎷 Personal/🧙🏿‍♂️ Memory/Chats"
   output_file: "synthetic_conversations.json"
 
 generation_parameters:
